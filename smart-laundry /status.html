@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Laundy — Machine Status</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #13131a;
+    --surface2: #1c1c28;
+    --accent: #7fffb2;
+    --warn: #ffb347;
+    --danger: #ff6b6b;
+    --text: #f0f0f8;
+    --muted: #6b6b8a;
+    --border: #2a2a3d;
+    --radius: 16px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    min-height: 100vh;
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(127,255,178,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(127,255,178,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    max-width: 700px;
+    margin: 0 auto;
+    padding: 48px 20px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* HEADER */
+  .header {
+    text-align: center;
+    margin-bottom: 48px;
+    animation: fadeUp 0.5s ease both;
+  }
+  .logo {
+    font-family: 'Syne', sans-serif;
+    font-size: 52px;
+    font-weight: 800;
+    color: var(--accent);
+    letter-spacing: -2px;
+    line-height: 1;
+  }
+  .logo span { color: var(--text); }
+  .tagline {
+    font-size: 12px;
+    color: var(--muted);
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    margin-top: 8px;
+  }
+  .last-updated {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+  .live-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.4; transform: scale(0.8); }
+  }
+
+  /* SECTION */
+  .section {
+    margin-bottom: 40px;
+    animation: fadeUp 0.5s ease both;
+  }
+  .section:nth-child(2) { animation-delay: 0.1s; }
+  .section:nth-child(3) { animation-delay: 0.2s; }
+
+  .section-label {
+    font-size: 11px;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* MACHINE CARDS */
+  .machines {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+
+  @media (max-width: 480px) {
+    .machines { grid-template-columns: 1fr; }
+  }
+
+  .machine-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 24px;
+    cursor: pointer;
+    transition: all 0.25s;
+    position: relative;
+    overflow: hidden;
+    text-decoration: none;
+    display: block;
+  }
+
+  .machine-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--border);
+    transition: background 0.25s;
+  }
+
+  .machine-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 40px rgba(0,0,0,0.4);
+  }
+
+  .machine-card.available::before { background: var(--accent); }
+  .machine-card.in_use::before { background: var(--warn); }
+
+  .machine-card.available {
+    border-color: rgba(127,255,178,0.2);
+  }
+  .machine-card.in_use {
+    border-color: rgba(255,179,71,0.2);
+  }
+
+  .machine-card:hover.available { border-color: var(--accent); }
+  .machine-card:hover.in_use { border-color: var(--warn); }
+
+  .card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 16px;
+  }
+
+  .machine-name {
+    font-family: 'Syne', sans-serif;
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--text);
+  }
+
+  .status-badge {
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border-radius: 100px;
+    font-weight: 500;
+  }
+  .status-badge.available {
+    background: rgba(127,255,178,0.1);
+    color: var(--accent);
+    border: 1px solid rgba(127,255,178,0.3);
+  }
+  .status-badge.in_use {
+    background: rgba(255,179,71,0.1);
+    color: var(--warn);
+    border: 1px solid rgba(255,179,71,0.3);
+  }
+
+  /* AVAILABLE STATE */
+  .available-content {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--accent);
+    font-size: 13px;
+  }
+  .available-icon {
+    font-size: 28px;
+  }
+  .available-text {
+    color: var(--muted);
+    font-size: 12px;
+    margin-top: 2px;
+  }
+
+  /* IN USE STATE */
+  .user-info {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+  .user-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: rgba(255,179,71,0.15);
+    border: 1px solid rgba(255,179,71,0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+  }
+  .user-name {
+    font-family: 'Syne', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .user-sub {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 1px;
+  }
+
+  .timer-bar-wrap {
+    background: var(--surface2);
+    border-radius: 100px;
+    height: 6px;
+    overflow: hidden;
+    margin-bottom: 8px;
+  }
+  .timer-bar {
+    height: 100%;
+    border-radius: 100px;
+    background: var(--warn);
+    transition: width 1s linear;
+  }
+
+  .time-remaining {
+    font-size: 12px;
+    color: var(--warn);
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .card-meta {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-top: 12px;
+  }
+  .meta-tag {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 3px 8px;
+    font-size: 10px;
+    color: var(--muted);
+  }
+
+  .card-cta {
+    margin-top: 16px;
+    font-size: 12px;
+    color: var(--accent);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .card-cta.warn { color: var(--warn); }
+
+  /* SUMMARY BAR */
+  .summary-bar {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+    margin-bottom: 40px;
+    animation: fadeUp 0.5s 0.05s ease both;
+  }
+  .summary-item {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 18px;
+    text-align: center;
+  }
+  .summary-number {
+    font-family: 'Syne', sans-serif;
+    font-size: 32px;
+    font-weight: 800;
+  }
+  .summary-number.green { color: var(--accent); }
+  .summary-number.orange { color: var(--warn); }
+  .summary-number.muted { color: var(--muted); }
+  .summary-label {
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-top: 4px;
+  }
+
+  /* ADMIN LINK */
+  .admin-link {
+    text-align: center;
+    margin-top: 48px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+    animation: fadeUp 0.5s 0.3s ease both;
+  }
+  .admin-link a {
+    color: var(--muted);
+    font-size: 12px;
+    text-decoration: none;
+    transition: color 0.2s;
+  }
+  .admin-link a:hover { color: var(--text); }
+
+  /* LOADING SKELETON */
+  .skeleton {
+    background: linear-gradient(90deg, var(--surface) 25%, var(--surface2) 50%, var(--surface) 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite;
+    border-radius: 8px;
+    height: 16px;
+  }
+  @keyframes shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="logo">Laund<span>y</span></div>
+    <div class="tagline">Smart Campus Laundry</div>
+    <div class="last-updated">
+      <div class="live-dot"></div>
+      <span id="lastUpdated">Updating...</span>
+    </div>
+  </div>
+
+  <!-- SUMMARY BAR -->
+  <div class="summary-bar" id="summaryBar">
+    <div class="summary-item">
+      <div class="summary-number green skeleton" style="width:40px;margin:0 auto;">&nbsp;</div>
+      <div class="summary-label">Available</div>
+    </div>
+    <div class="summary-item">
+      <div class="summary-number orange skeleton" style="width:40px;margin:0 auto;">&nbsp;</div>
+      <div class="summary-label">In Use</div>
+    </div>
+    <div class="summary-item">
+      <div class="summary-number muted skeleton" style="width:40px;margin:0 auto;">&nbsp;</div>
+      <div class="summary-label">Total</div>
+    </div>
+  </div>
+
+  <!-- WASHERS -->
+  <div class="section">
+    <div class="section-label">🫧 Washers</div>
+    <div class="machines" id="washerGrid">
+      <div class="machine-card"><div class="skeleton" style="height:120px;"></div></div>
+      <div class="machine-card"><div class="skeleton" style="height:120px;"></div></div>
+    </div>
+  </div>
+
+  <!-- DRYERS -->
+  <div class="section">
+    <div class="section-label">🌀 Dryers</div>
+    <div class="machines" id="dryerGrid">
+      <div class="machine-card"><div class="skeleton" style="height:120px;"></div></div>
+      <div class="machine-card"><div class="skeleton" style="height:120px;"></div></div>
+    </div>
+  </div>
+
+  <!-- ADMIN LINK -->
+  <div class="admin-link">
+    <a href="/admin.html">Admin Dashboard →</a>
+  </div>
+
+</div>
+
+<script>
+  let machines = {};
+
+  async function loadMachines() {
+    try {
+      const res = await fetch('http://localhost:3000/api/machines');
+      machines = await res.json();
+      render();
+      document.getElementById('lastUpdated').textContent = 'Live · Updated just now';
+    } catch (err) {
+      document.getElementById('lastUpdated').textContent = '⚠️ Cannot connect to server';
+    }
+  }
+
+  function getTimeRemaining(session) {
+    if (!session) return 0;
+    const elapsed = Math.floor((Date.now() - session.startTime) / 60000);
+    return Math.max(0, session.duration - elapsed);
+  }
+
+  function getProgressPercent(session) {
+    if (!session) return 0;
+    const elapsed = (Date.now() - session.startTime) / 60000;
+    return Math.min(100, (elapsed / session.duration) * 100);
+  }
+
+  function renderMachineCard(m) {
+    const isInUse = m.status === 'in_use';
+    const s = m.session;
+    const remaining = getTimeRemaining(s);
+    const progress = getProgressPercent(s);
+    const url = `/machine.html?id=${m.id}`;
+
+    if (!isInUse) {
+      return `
+        <a class="machine-card available" href="${url}">
+          <div class="card-top">
+            <div class="machine-name">${m.label}</div>
+            <div class="status-badge available">Available</div>
+          </div>
+          <div class="available-content">
+            <div class="available-icon">${m.type === 'washer' ? '🫧' : '🌀'}</div>
+            <div>
+              <div>Ready to use</div>
+              <div class="available-text">Tap to claim this machine</div>
+            </div>
+          </div>
+          <div class="card-cta">Claim now →</div>
+        </a>`;
+    }
+
+    const tags = [];
+    if (m.type === 'washer' && s.dryerSettings) tags.push(s.dryerSettings.replace(/_/g, ' '));
+    if (s.movable === 'YES') tags.push('✅ OK to move');
+    if (s.movable === 'NO') tags.push('🚫 Do not move');
+
+    return `
+      <a class="machine-card in_use" href="${url}">
+        <div class="card-top">
+          <div class="machine-name">${m.label}</div>
+          <div class="status-badge in_use">In Use</div>
+        </div>
+        <div class="user-info">
+          <div class="user-avatar">👤</div>
+          <div>
+            <div class="user-name">${s.originalOwner.name}</div>
+            <div class="user-sub">${remaining > 0 ? `~${remaining} min remaining` : 'Should be done!'}</div>
+          </div>
+        </div>
+        <div class="timer-bar-wrap">
+          <div class="timer-bar" style="width:${progress}%"></div>
+        </div>
+        <div class="time-remaining">
+          <span>${remaining > 0 ? `${remaining} min left` : 'Complete!'}</span>
+          <span>${s.duration} min total</span>
+        </div>
+        ${tags.length > 0 ? `
+        <div class="card-meta">
+          ${tags.map(t => `<span class="meta-tag">${t}</span>`).join('')}
+        </div>` : ''}
+        <div class="card-cta warn">Send a note →</div>
+      </a>`;
+  }
+
+  function render() {
+    const all = Object.values(machines);
+    const washers = all.filter(m => m.type === 'washer');
+    const dryers = all.filter(m => m.type === 'dryer');
+    const available = all.filter(m => m.status === 'available').length;
+    const inUse = all.filter(m => m.status === 'in_use').length;
+
+    // Summary
+    document.getElementById('summaryBar').innerHTML = `
+      <div class="summary-item">
+        <div class="summary-number green">${available}</div>
+        <div class="summary-label">Available</div>
+      </div>
+      <div class="summary-item">
+        <div class="summary-number orange">${inUse}</div>
+        <div class="summary-label">In Use</div>
+      </div>
+      <div class="summary-item">
+        <div class="summary-number muted">${all.length}</div>
+        <div class="summary-label">Total</div>
+      </div>`;
+
+    document.getElementById('washerGrid').innerHTML = washers.map(renderMachineCard).join('');
+    document.getElementById('dryerGrid').innerHTML = dryers.map(renderMachineCard).join('');
+  }
+
+  // Load on start
+  loadMachines();
+
+  // Auto-refresh every 30 seconds
+  setInterval(() => {
+    loadMachines();
+  }, 30000);
+
+  // Live timer update every minute
+  setInterval(() => {
+    if (Object.keys(machines).length > 0) render();
+  }, 60000);
+</script>
+</body>
+</html>

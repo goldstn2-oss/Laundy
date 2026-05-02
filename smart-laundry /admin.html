@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Laundy — Admin</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f;
+    --surface: #13131a;
+    --surface2: #1c1c28;
+    --accent: #7fffb2;
+    --warn: #ffb347;
+    --danger: #ff6b6b;
+    --text: #f0f0f8;
+    --muted: #6b6b8a;
+    --border: #2a2a3d;
+    --radius: 16px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'DM Mono', monospace;
+    min-height: 100vh;
+  }
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(127,255,178,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(127,255,178,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 40px 20px;
+    position: relative;
+    z-index: 1;
+  }
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 40px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--border);
+  }
+  .logo {
+    font-family: 'Syne', sans-serif;
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--accent);
+  }
+  .logo span { color: var(--text); }
+  .section-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 16px;
+    color: var(--muted);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+  .machine-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 48px;
+  }
+  .machine-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 24px;
+    position: relative;
+    overflow: hidden;
+    transition: transform 0.2s;
+  }
+  .machine-card:hover { transform: translateY(-2px); }
+  .machine-card.in-use { border-color: var(--warn); }
+  .machine-card.in-use::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--warn);
+  }
+  .machine-card.available { border-color: var(--accent); }
+  .machine-card.available::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--accent);
+  }
+  .machine-type {
+    font-size: 11px;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+  .machine-label {
+    font-family: 'Syne', sans-serif;
+    font-size: 22px;
+    font-weight: 800;
+    margin-bottom: 12px;
+  }
+  .machine-status {
+    font-size: 12px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  .machine-status.available { color: var(--accent); }
+  .machine-status.in-use { color: var(--warn); }
+  .machine-user { font-size: 14px; color: var(--text); margin-bottom: 4px; }
+  .machine-timer { font-size: 18px; color: var(--warn); font-weight: 500; margin-bottom: 8px; }
+  .machine-details { font-size: 11px; color: var(--muted); line-height: 1.8; margin-bottom: 12px; }
+  .card-btn {
+    width: 100%;
+    border-radius: 8px;
+    padding: 10px;
+    font-family: 'DM Mono', monospace;
+    font-size: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-bottom: 8px;
+    border: 1px solid;
+  }
+  .card-btn:last-child { margin-bottom: 0; }
+  .btn-remind {
+    background: rgba(255,179,71,0.1);
+    border-color: var(--warn);
+    color: var(--warn);
+  }
+  .btn-remind:hover { background: rgba(255,179,71,0.2); }
+  .btn-remind:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-free {
+    background: rgba(255,107,107,0.1);
+    border-color: var(--danger);
+    color: var(--danger);
+  }
+  .btn-free:hover { background: rgba(255,107,107,0.2); }
+  .qr-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 32px;
+    margin-bottom: 48px;
+  }
+  .qr-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 16px;
+    margin-top: 20px;
+  }
+  .qr-item {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    text-align: center;
+  }
+  .qr-item a {
+    color: var(--accent);
+    font-size: 12px;
+    word-break: break-all;
+    text-decoration: none;
+  }
+  .qr-item a:hover { text-decoration: underline; }
+  .qr-label {
+    font-family: 'Syne', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+  .toast {
+    position: fixed;
+    bottom: 32px;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background: var(--surface2);
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    padding: 14px 24px;
+    border-radius: 100px;
+    font-size: 13px;
+    transition: transform 0.3s ease;
+    z-index: 999;
+    white-space: nowrap;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <div class="logo">Laund<span>y</span> <span style="color:var(--muted);font-size:16px;font-family:'DM Mono'">Admin</span></div>
+    <button onclick="loadMachines()" style="background:none;border:1px solid var(--border);color:var(--muted);padding:8px 16px;border-radius:100px;font-family:'DM Mono',monospace;font-size:12px;cursor:pointer;">↻ Refresh</button>
+  </div>
+
+  <div class="section-title">Machine Status</div>
+  <div class="machine-grid" id="machineGrid">
+    <div style="color:var(--muted);font-size:13px;">Loading...</div>
+  </div>
+
+  <div class="qr-section">
+    <div class="section-title" style="margin-bottom:4px;">QR Code Links</div>
+    <div style="color:var(--muted);font-size:13px;margin-bottom:4px;">Point your QR codes to these URLs</div>
+    <div class="qr-grid">
+      <div class="qr-item">
+        <div class="qr-label">🫧 Washer 1</div>
+        <a href="http://localhost:3000/machine.html?id=washer1" target="_blank">localhost:3000/machine.html?id=washer1</a>
+      </div>
+      <div class="qr-item">
+        <div class="qr-label">🫧 Washer 2</div>
+        <a href="http://localhost:3000/machine.html?id=washer2" target="_blank">localhost:3000/machine.html?id=washer2</a>
+      </div>
+      <div class="qr-item">
+        <div class="qr-label">🌀 Dryer 1</div>
+        <a href="http://localhost:3000/machine.html?id=dryer1" target="_blank">localhost:3000/machine.html?id=dryer1</a>
+      </div>
+      <div class="qr-item">
+        <div class="qr-label">🌀 Dryer 2</div>
+        <a href="http://localhost:3000/machine.html?id=dryer2" target="_blank">localhost:3000/machine.html?id=dryer2</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  async function loadMachines() {
+    try {
+      const res = await fetch('http://localhost:3000/api/machines');
+      const machines = await res.json();
+      renderMachines(machines);
+    } catch (err) {
+      document.getElementById('machineGrid').innerHTML =
+        '<div style="color:var(--danger);font-size:13px;">❌ Cannot connect to server at localhost:3000</div>';
+    }
+  }
+
+  function renderMachines(machines) {
+    const grid = document.getElementById('machineGrid');
+    grid.innerHTML = Object.values(machines).map(m => {
+      const isInUse = m.status === 'in_use';
+      const s = m.session;
+      const elapsed = s ? Math.floor((Date.now() - s.startTime) / 60000) : 0;
+      const remaining = s ? Math.max(0, s.duration - elapsed) : 0;
+
+      return `
+        <div class="machine-card ${isInUse ? 'in-use' : 'available'}">
+          <div class="machine-type">${m.type}</div>
+          <div class="machine-label">${m.label}</div>
+          <div class="machine-status ${isInUse ? 'in-use' : 'available'}">
+            ${isInUse ? '● In Use' : '● Available'}
+          </div>
+          ${isInUse ? `
+            <div class="machine-user">👤 ${s.originalOwner.name}</div>
+            <div class="machine-timer">${remaining > 0 ? remaining + ' min left' : 'Done!'}</div>
+            <div class="machine-details">
+              ${m.type === 'washer' && s.dryerSettings ? `🌡 ${s.dryerSettings.replace(/_/g, ' ')}<br>` : ''}
+              ${s.movable === 'YES' ? '✅ OK to move' : '🚫 Do not move'}<br>
+              ${s.notes ? `📝 "${s.notes}"` : ''}
+            </div>
+            <button class="card-btn btn-remind" onclick="sendReminder('${m.id}')" ${s.reminderSent ? 'disabled' : ''}>
+              ${s.reminderSent ? '✓ Reminder sent' : '⏰ Send 5-min reminder'}
+            </button>
+            <button class="card-btn btn-free" onclick="freeMachine('${m.id}')">
+              🗑 Mark as Available
+            </button>
+          ` : `
+            <div style="color:var(--accent);font-size:13px;margin-top:8px;">Ready to use!</div>
+          `}
+        </div>
+      `;
+    }).join('');
+  }
+
+  async function sendReminder(id) {
+    try {
+      const res = await fetch(`http://localhost:3000/api/machines/${id}/remind`, { method: 'POST' });
+      const data = await res.json();
+      if (data.success) { showToast('⏰ Reminder sent!'); loadMachines(); }
+      else showToast('❌ Failed to send reminder');
+    } catch { showToast('❌ Server error'); }
+  }
+
+  async function freeMachine(id) {
+    if (!confirm('Mark this machine as available?')) return;
+    try {
+      await fetch(`http://localhost:3000/api/machines/${id}/free`, { method: 'POST' });
+      showToast('✅ Machine freed!');
+      loadMachines();
+    } catch { showToast('❌ Server error'); }
+  }
+
+  function showToast(msg) {
+    const toast = document.getElementById('toast');
+    toast.textContent = msg;
+    toast.classList.add('show');
+    setTimeout(() => toast.classList.remove('show'), 3000);
+  }
+
+  loadMachines();
+  setInterval(loadMachines, 30000);
+</script>
+</body>
+</html>

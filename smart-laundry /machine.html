@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Laundy — Machine</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0a0a0f; --surface: #13131a; --surface2: #1c1c28;
+    --accent: #7fffb2; --warn: #ffb347; --danger: #ff6b6b;
+    --text: #f0f0f8; --muted: #6b6b8a; --border: #2a2a3d;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: 'DM Mono', monospace; min-height: 100vh; }
+  body::before { content: ''; position: fixed; inset: 0; background-image: linear-gradient(rgba(127,255,178,0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(127,255,178,0.03) 1px, transparent 1px); background-size: 40px 40px; pointer-events: none; z-index: 0; }
+  .container { max-width: 520px; margin: 0 auto; padding: 40px 20px; position: relative; z-index: 1; }
+  .logo { font-family: 'Syne', sans-serif; font-size: 28px; font-weight: 800; color: var(--accent); margin-bottom: 32px; text-decoration: none; display: block; }
+  .logo span { color: var(--text); }
+  .machine-badge { display: inline-flex; align-items: center; gap: 8px; background: var(--surface); border: 1px solid var(--border); border-radius: 100px; padding: 8px 16px; font-size: 13px; margin-bottom: 24px; }
+  .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+  .status-dot.in-use { background: var(--warn); animation: pulse 1.5s infinite; }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 24px; padding: 36px; margin-bottom: 16px; animation: fadeUp 0.4s ease both; }
+  .card-title { font-family: 'Syne', sans-serif; font-size: 24px; font-weight: 800; margin-bottom: 6px; }
+  .card-sub { color: var(--muted); font-size: 13px; margin-bottom: 28px; }
+  .form-group { margin-bottom: 18px; }
+  label { display: block; font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+  input, select, textarea { width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; color: var(--text); font-family: 'DM Mono', monospace; font-size: 14px; transition: border-color 0.2s; outline: none; }
+  input:focus, select:focus, textarea:focus { border-color: var(--accent); }
+  select option { background: var(--surface2); }
+  textarea { resize: vertical; min-height: 80px; }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .toggle-group { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .toggle-btn { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 12px; color: var(--muted); font-family: 'DM Mono', monospace; font-size: 12px; cursor: pointer; transition: all 0.2s; text-align: center; }
+  .toggle-btn:hover, .toggle-btn.selected { border-color: var(--accent); color: var(--accent); background: rgba(127,255,178,0.05); }
+  .submit-btn { width: 100%; background: var(--accent); color: var(--bg); border: none; padding: 18px; border-radius: 12px; font-family: 'Syne', sans-serif; font-weight: 700; font-size: 16px; cursor: pointer; transition: all 0.2s; margin-top: 8px; }
+  .submit-btn:hover { box-shadow: 0 8px 30px rgba(127,255,178,0.3); transform: translateY(-1px); }
+  .submit-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+  .submit-btn.warn-btn { background: var(--warn); color: var(--bg); }
+  .submit-btn.warn-btn:hover { box-shadow: 0 8px 30px rgba(255,179,71,0.3); }
+  .submit-btn.danger-btn { background: var(--danger); color: white; }
+  .in-use-header { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; }
+  .in-use-avatar { width: 56px; height: 56px; background: rgba(255,179,71,0.1); border: 2px solid var(--warn); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 24px; flex-shrink: 0; }
+  .in-use-name { font-family: 'Syne', sans-serif; font-size: 20px; font-weight: 700; }
+  .in-use-time { color: var(--warn); font-size: 13px; margin-top: 2px; }
+  .detail-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid var(--border); font-size: 14px; gap: 16px; }
+  .detail-row:last-child { border-bottom: none; }
+  .detail-label { color: var(--muted); }
+  .detail-value { color: var(--text); text-align: right; }
+  .success-card { text-align: center; padding: 48px 36px; }
+  .success-icon { width: 72px; height: 72px; background: rgba(127,255,178,0.1); border: 2px solid var(--accent); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 28px; margin: 0 auto 20px; animation: popIn 0.4s ease both; }
+  .success-title { font-family: 'Syne', sans-serif; font-size: 28px; font-weight: 800; margin-bottom: 8px; }
+  .success-sub { color: var(--muted); font-size: 13px; margin-bottom: 24px; }
+  .text-badge { display: inline-block; background: rgba(127,255,178,0.1); border: 1px solid var(--accent); border-radius: 100px; padding: 6px 16px; font-size: 12px; color: var(--accent); margin-bottom: 24px; }
+  .conditional { display: none; }
+  .conditional.visible { display: block; }
+  .divider { height: 1px; background: var(--border); margin: 20px 0; }
+  .my-laundry-toggle { background: none; border: none; color: var(--muted); font-family: 'DM Mono', monospace; font-size: 12px; cursor: pointer; text-decoration: underline; padding: 0; }
+  .my-laundry-toggle:hover { color: var(--text); }
+  .confirm-name-box { margin-top: 16px; display: none; }
+  .confirm-name-box.visible { display: block; }
+  #loading { min-height: 100vh; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 16px; }
+  .spinner { width: 32px; height: 32px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes popIn { from { opacity: 0; transform: scale(0.5); } to { opacity: 1; transform: scale(1); } }
+  .toast { position: fixed; bottom: 32px; left: 50%; transform: translateX(-50%) translateY(100px); background: var(--surface2); border: 1px solid var(--accent); color: var(--accent); padding: 14px 24px; border-radius: 100px; font-size: 13px; transition: transform 0.3s ease; z-index: 999; white-space: nowrap; }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<div id="loading"><div class="spinner"></div><div style="color:var(--muted);font-size:13px;">Loading machine status...</div></div>
+
+<div id="app" style="display:none;">
+  <div class="container">
+    <a href="/status.html" class="logo">Laund<span>y</span></a>
+    <div class="machine-badge"><div class="status-dot" id="statusDot"></div><span id="machineBadgeLabel">Loading...</span></div>
+
+    <!-- ===== AVAILABLE STATE ===== -->
+    <div id="availableView" style="display:none;">
+      <div class="card">
+        <div class="card-title" id="availableTitle">Claim this machine</div>
+        <div class="card-sub" id="availableSub">Fill in your details to get started</div>
+
+        <!-- WASHER FORM -->
+        <div id="washerForm">
+          <div class="form-row">
+            <div class="form-group"><label>Your Name</label><input type="text" id="w-name" placeholder="e.g. Nathan" /></div>
+            <div class="form-group"><label>Phone Number</label><input type="tel" id="w-phone" placeholder="+15551234567" /></div>
+          </div>
+          <div class="form-group"><label>Wash Duration (minutes)</label><input type="number" id="w-duration" placeholder="e.g. 45" min="1" max="120" /></div>
+          <div class="form-group">
+            <label>Dryer Settings Preference</label>
+            <select id="w-dryer">
+              <option value="">Select preference...</option>
+              <option value="HIGH_TEMP">High Temp</option>
+              <option value="MED_TEMP">Medium Temp</option>
+              <option value="LOW_TEMP">Low Temp</option>
+              <option value="NO_HEAT">No Heat</option>
+              <option value="DELICATES">Delicates</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>OK to Move Laundry?</label>
+            <div class="toggle-group">
+              <button class="toggle-btn" onclick="selectToggle('w-movable','YES',this)">Yes, go ahead</button>
+              <button class="toggle-btn" onclick="selectToggle('w-movable','NO',this)">Please don't</button>
+            </div>
+            <input type="hidden" id="w-movable" value="" />
+          </div>
+          <div class="form-group"><label>Notes (optional)</label><textarea id="w-notes" placeholder="e.g. These are delicates!"></textarea></div>
+          <button class="submit-btn" id="washerSubmitBtn" onclick="claimWasher()">Start Wash Cycle</button>
+        </div>
+
+        <!-- DRYER FORM -->
+        <div id="dryerForm" style="display:none;">
+          <div class="form-row">
+            <div class="form-group"><label>Your Name</label><input type="text" id="d-name" placeholder="e.g. Nathan" /></div>
+            <div class="form-group"><label>Phone Number</label><input type="tel" id="d-phone" placeholder="+15551234567" /></div>
+          </div>
+          <div class="form-group"><label>Dryer Duration (minutes)</label><input type="number" id="d-duration" placeholder="e.g. 50" min="1" max="120" /></div>
+          <div class="form-group">
+            <label>Whose laundry is this?</label>
+            <div class="toggle-group">
+              <button class="toggle-btn" onclick="selectToggle('d-moved','NO',this);showMovedSection(false)">My own laundry</button>
+              <button class="toggle-btn" onclick="selectToggle('d-moved','YES',this);showMovedSection(true)">Someone else's</button>
+            </div>
+            <input type="hidden" id="d-moved" value="" />
+          </div>
+          <div id="movedSection" class="conditional">
+            <div class="form-group">
+              <label>Which washer did you move it from?</label>
+              <select id="d-from">
+                <option value="">Select washer...</option>
+                <option value="washer1">Washer 1</option>
+                <option value="washer2">Washer 2</option>
+              </select>
+            </div>
+          </div>
+          <div class="form-group">
+            <label>OK to Move This Laundry?</label>
+            <div class="toggle-group">
+              <button class="toggle-btn" onclick="selectToggle('d-movable','YES',this)">Yes, go ahead</button>
+              <button class="toggle-btn" onclick="selectToggle('d-movable','NO',this)">Please don't</button>
+            </div>
+            <input type="hidden" id="d-movable" value="" />
+          </div>
+          <div class="form-group"><label>Notes (optional)</label><textarea id="d-notes" placeholder="e.g. Left a fabric sheet inside!"></textarea></div>
+          <button class="submit-btn" id="dryerSubmitBtn" onclick="claimDryer()">Start Dry Cycle</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== IN USE STATE ===== -->
+    <div id="inUseView" style="display:none;">
+      <div class="card" style="border-color: var(--warn);">
+        <div class="in-use-header">
+          <div class="in-use-avatar">🧺</div>
+          <div>
+            <div class="in-use-name" id="inUseName">—</div>
+            <div class="in-use-time" id="inUseTime">—</div>
+          </div>
+        </div>
+        <div id="inUseDetails"></div>
+        <div class="divider"></div>
+        <button class="my-laundry-toggle" onclick="toggleMyLaundry()">This is my laundry — I'm done!</button>
+        <div class="confirm-name-box" id="confirmNameBox">
+          <div class="form-group" style="margin-top:12px;">
+            <label>Confirm your name to mark as done</label>
+            <input type="text" id="confirm-name" placeholder="Type your name..." />
+          </div>
+          <button class="submit-btn danger-btn" onclick="markDone()">Mark as Done</button>
+        </div>
+      </div>
+
+      <!-- SEND NOTE CARD -->
+      <div class="card">
+        <div class="card-title" style="font-size:18px;margin-bottom:6px;">Send a note via Laundy</div>
+        <div class="card-sub">They'll get a text from Laundy with your message</div>
+        <div class="form-group"><label>Your Name</label><input type="text" id="note-sender" placeholder="e.g. Alex" /></div>
+        <div class="form-group"><label>Your Message</label><textarea id="note-message" placeholder="e.g. Hey, you almost done?"></textarea></div>
+        <button class="submit-btn warn-btn" onclick="sendNote()">Send Note via Laundy</button>
+      </div>
+    </div>
+
+    <!-- ===== SUCCESS STATE ===== -->
+    <div id="successView" style="display:none;">
+      <div class="card success-card">
+        <div class="success-icon">✓</div>
+        <div class="success-title" id="successTitle">You're all set!</div>
+        <div class="success-sub" id="successSub">Laundy is watching your laundry</div>
+        <div class="text-badge">Confirmation text sent!</div>
+        <div id="successDetails" style="text-align:left;margin-bottom:24px;"></div>
+        <button class="submit-btn" onclick="window.location.reload()">Done</button>
+      </div>
+    </div>
+
+    <!-- ===== DONE STATE ===== -->
+    <div id="doneView" style="display:none;">
+      <div class="card success-card">
+        <div class="success-icon" style="background:rgba(255,107,107,0.1);border-color:var(--danger);">✓</div>
+        <div class="success-title">All done!</div>
+        <div class="success-sub" id="doneSubText">Machine is now available for others.</div>
+        <a href="/status.html"><button class="submit-btn" style="margin-top:8px;">Back to Status</button></a>
+      </div>
+    </div>
+
+    <!-- ===== NOTE SENT STATE ===== -->
+    <div id="noteSentView" style="display:none;">
+      <div class="card success-card">
+        <div class="success-icon">💬</div>
+        <div class="success-title">Note Sent!</div>
+        <div class="success-sub">Laundy delivered your message via text</div>
+        <button class="submit-btn" onclick="window.location.reload()" style="margin-top:8px;">Back</button>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+  const params = new URLSearchParams(window.location.search);
+  const machineId = params.get('id') || 'washer1';
+  let machineData = null;
+
+  async function init() {
+    try {
+      const res = await fetch('http://localhost:3000/api/machines/' + machineId);
+      machineData = await res.json();
+      renderMachine();
+    } catch (err) {
+      document.getElementById('loading').innerHTML = '<div style="color:var(--danger);text-align:center;padding:40px;"><div style="font-size:32px;margin-bottom:16px;">warning</div><div style="font-family:Syne,sans-serif;font-size:20px;font-weight:800;">Cannot connect to server</div><div style="color:var(--muted);font-size:13px;margin-top:8px;">Make sure your server is running at localhost:3000</div></div>';
+    }
+  }
+
+  function renderMachine() {
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    const isInUse = machineData.status === 'in_use';
+    document.getElementById('machineBadgeLabel').textContent = machineData.label + ' — ' + (isInUse ? 'In Use' : 'Available');
+    if (isInUse) document.getElementById('statusDot').classList.add('in-use');
+    if (isInUse) {
+      renderInUse();
+    } else {
+      renderAvailable();
+    }
+  }
+
+  function renderAvailable() {
+    document.getElementById('availableView').style.display = 'block';
+    var isWasher = machineData.type === 'washer';
+    document.getElementById('availableTitle').textContent = 'Claim ' + machineData.label;
+    document.getElementById('availableSub').textContent = isWasher ? 'Fill in your wash details and Laundy will keep you posted' : 'Fill in your dry cycle details';
+    document.getElementById('washerForm').style.display = isWasher ? 'block' : 'none';
+    document.getElementById('dryerForm').style.display = isWasher ? 'none' : 'block';
+  }
+
+  function renderInUse() {
+    document.getElementById('inUseView').style.display = 'block';
+    var s = machineData.session;
+    var elapsed = Math.floor((Date.now() - s.startTime) / 60000);
+    var remaining = Math.max(0, s.duration - elapsed);
+    document.getElementById('inUseName').textContent = s.originalOwner.name;
+    document.getElementById('inUseTime').textContent = remaining > 0 ? ('~' + remaining + ' min remaining') : 'Should be done!';
+    var details = [];
+    if (machineData.type === 'washer' && s.dryerSettings) details.push({ label: 'Dryer Pref', value: s.dryerSettings.replace(/_/g, ' ') });
+    details.push({ label: 'OK to Move', value: s.movable === 'YES' ? 'Yes' : 'No' });
+    if (s.notes) details.push({ label: 'Notes', value: '"' + s.notes + '"' });
+    document.getElementById('inUseDetails').innerHTML = details.map(function(d) {
+      return '<div class="detail-row"><span class="detail-label">' + d.label + '</span><span class="detail-value">' + d.value + '</span></div>';
+    }).join('');
+  }
+
+  function toggleMyLaundry() {
+    var box = document.getElementById('confirmNameBox');
+    box.classList.toggle('visible');
+  }
+
+  async function markDone() {
+    var confirmName = document.getElementById('confirm-name').value.trim().toLowerCase();
+    var ownerName = machineData.session.originalOwner.name.toLowerCase();
+    if (!confirmName) { showToast('Please type your name to confirm'); return; }
+    if (confirmName !== ownerName) { showToast('Name does not match. Try again!'); return; }
+    try {
+      var res = await fetch('http://localhost:3000/api/machines/' + machineId + '/free', { method: 'POST' });
+      var data = await res.json();
+      if (data.success) {
+        document.getElementById('inUseView').style.display = 'none';
+        document.getElementById('doneView').style.display = 'block';
+        document.getElementById('doneSubText').textContent = machineData.label + ' is now available for others.';
+      } else {
+        showToast('Something went wrong');
+      }
+    } catch(e) { showToast('Cannot connect to server'); }
+  }
+
+  function selectToggle(inputId, value, btn) {
+    btn.parentElement.querySelectorAll('.toggle-btn').forEach(function(b) { b.classList.remove('selected'); });
+    btn.classList.add('selected');
+    document.getElementById(inputId).value = value;
+  }
+
+  function showMovedSection(show) {
+    document.getElementById('movedSection').classList.toggle('visible', show);
+    if (!show) document.getElementById('d-from').value = '';
+  }
+
+  async function claimWasher() {
+    var name = document.getElementById('w-name').value.trim();
+    var phone = document.getElementById('w-phone').value.trim();
+    var duration = document.getElementById('w-duration').value.trim();
+    var dryerSettings = document.getElementById('w-dryer').value;
+    var movable = document.getElementById('w-movable').value;
+    var notes = document.getElementById('w-notes').value.trim();
+    if (!name || !phone || !duration || !dryerSettings || !movable) { showToast('Please fill in all required fields'); return; }
+    var btn = document.getElementById('washerSubmitBtn');
+    btn.disabled = true; btn.textContent = 'Starting...';
+    try {
+      var res = await fetch('http://localhost:3000/api/machines/' + machineId + '/claim', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name, phone: phone, duration: duration, dryerSettings: dryerSettings, movable: movable, notes: notes })
+      });
+      var data = await res.json();
+      if (data.success) {
+        showSuccess(machineData.label + ' is yours!', 'Laundy is watching your laundry', [
+          { label: 'Duration', value: duration + ' mins' },
+          { label: 'Dryer Pref', value: dryerSettings.replace(/_/g, ' ') },
+          { label: 'OK to Move', value: movable === 'YES' ? 'Yes' : 'No' },
+          ...(notes ? [{ label: 'Notes', value: '"' + notes + '"' }] : [])
+        ]);
+      } else { showToast(data.error || 'Something went wrong'); btn.disabled = false; btn.textContent = 'Start Wash Cycle'; }
+    } catch(e) { showToast('Cannot connect to server'); btn.disabled = false; btn.textContent = 'Start Wash Cycle'; }
+  }
+
+  async function claimDryer() {
+    var name = document.getElementById('d-name').value.trim();
+    var phone = document.getElementById('d-phone').value.trim();
+    var duration = document.getElementById('d-duration').value.trim();
+    var movable = document.getElementById('d-movable').value;
+    var movedLaundry = document.getElementById('d-moved').value;
+    var movedFromMachine = document.getElementById('d-from').value;
+    var notes = document.getElementById('d-notes').value.trim();
+    var isOwnLaundry = movedLaundry === 'YES' ? 'NO' : 'YES';
+    if (!name || !phone || !duration || !movable || !movedLaundry) { showToast('Please fill in all required fields'); return; }
+    if (movedLaundry === 'YES' && !movedFromMachine) { showToast('Please select which washer you moved it from'); return; }
+    var btn = document.getElementById('dryerSubmitBtn');
+    btn.disabled = true; btn.textContent = 'Starting...';
+    try {
+      var res = await fetch('http://localhost:3000/api/machines/' + machineId + '/claim-dryer', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name, phone: phone, duration: duration, movable: movable, movedLaundry: movedLaundry, movedFromMachine: movedFromMachine, isOwnLaundry: isOwnLaundry, notes: notes })
+      });
+      var data = await res.json();
+      if (data.success) {
+        showSuccess(machineData.label + ' is yours!', movedLaundry === 'YES' ? 'The original owner has been notified' : 'Laundy is watching your laundry', [
+          { label: 'Duration', value: duration + ' mins' },
+          { label: 'OK to Move', value: movable === 'YES' ? 'Yes' : 'No' },
+          ...(movedLaundry === 'YES' ? [{ label: 'Moved From', value: movedFromMachine }] : []),
+          ...(notes ? [{ label: 'Notes', value: '"' + notes + '"' }] : [])
+        ]);
+      } else { showToast(data.error || 'Something went wrong'); btn.disabled = false; btn.textContent = 'Start Dry Cycle'; }
+    } catch(e) { showToast('Cannot connect to server'); btn.disabled = false; btn.textContent = 'Start Dry Cycle'; }
+  }
+
+  async function sendNote() {
+    var senderName = document.getElementById('note-sender').value.trim();
+    var note = document.getElementById('note-message').value.trim();
+    if (!senderName || !note) { showToast('Please fill in your name and message'); return; }
+    try {
+      var res = await fetch('http://localhost:3000/api/machines/' + machineId + '/send-note', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ senderName: senderName, note: note })
+      });
+      var data = await res.json();
+      if (data.success) {
+        document.getElementById('inUseView').style.display = 'none';
+        document.getElementById('noteSentView').style.display = 'block';
+      } else showToast('Failed to send note');
+    } catch(e) { showToast('Cannot connect to server'); }
+  }
+
+  function showSuccess(title, sub, details) {
+    document.getElementById('availableView').style.display = 'none';
+    document.getElementById('successView').style.display = 'block';
+    document.getElementById('successTitle').textContent = title;
+    document.getElementById('successSub').textContent = sub;
+    document.getElementById('successDetails').innerHTML = details.map(function(d) {
+      return '<div class="detail-row"><span class="detail-label">' + d.label + '</span><span class="detail-value">' + d.value + '</span></div>';
+    }).join('');
+  }
+
+  function showToast(msg) {
+    var toast = document.getElementById('toast');
+    toast.textContent = msg; toast.classList.add('show');
+    setTimeout(function() { toast.classList.remove('show'); }, 3000);
+  }
+
+  init();
+</script>
+</body>
+</html>
